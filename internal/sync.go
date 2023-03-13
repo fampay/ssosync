@@ -173,7 +173,6 @@ func (s *syncGSuite) SyncUsers(query string) error {
 //  name:Admin* email:aws-*
 //  email:aws-*
 func (s *syncGSuite) SyncGroups(query string) error {
-
 	log.WithField("query", query).Debug("get google groups")
 	googleGroups, err := s.google.GetGroups(query)
 	if err != nil {
@@ -286,7 +285,6 @@ func (s *syncGSuite) SyncGroups(query string) error {
 //  5) validate equals aws an google groups members
 //  6) delete groups in aws, these were deleted in google
 func (s *syncGSuite) SyncGroupsUsers(query string) error {
-
 	log.WithField("query", query).Info("get google groups")
 	googleGroups, err := s.google.GetGroups(query)
 	if err != nil {
@@ -325,7 +323,6 @@ func (s *syncGSuite) SyncGroupsUsers(query string) error {
 	log.Info("get active status for aws users")
 	for _, awsUser := range awsUsers {
 		scimUser, err := s.aws.FindUserByEmail(awsUser.Username)
-
 		if err != nil {
 			log.Error("error getting active status for user " + awsUser.ID)
 			return err
@@ -350,25 +347,7 @@ func (s *syncGSuite) SyncGroupsUsers(query string) error {
 	log.Info("syncing changes")
 	// delete aws users (deleted in google)
 	log.Debug("deleting aws users deleted in google")
-	for _, awsUser := range delAWSUsers {
-
-		log := log.WithFields(log.Fields{"user": awsUser.Username})
-
-		log.Debug("finding user")
-		awsUserFull, err := s.aws.FindUserByEmail(awsUser.Username)
-		if err != nil {
-			return err
-		}
-
-		log.Warn("deleting user")
-		_, err = s.identityStoreClient.DeleteUser(
-			&identitystore.DeleteUserInput{IdentityStoreId: &s.cfg.IdentityStoreID, UserId: &awsUserFull.ID},
-		)
-		if err != nil {
-			log.Error("error deleting user")
-			return err
-		}
-	}
+	log.Info("Since I am smart I won't delete these users", delAWSUsers)
 
 	// update aws users (updated in google)
 	log.Debug("updating aws users updated in google")
@@ -503,26 +482,7 @@ func (s *syncGSuite) SyncGroupsUsers(query string) error {
 
 	// delete aws groups (deleted in google)
 	log.Debug("delete aws groups deleted in google")
-	for _, awsGroup := range delAWSGroups {
-
-		log := log.WithFields(log.Fields{"group": awsGroup.DisplayName})
-
-		log.Debug("finding group")
-		awsGroupFull, err := s.aws.FindGroupByDisplayName(awsGroup.DisplayName)
-		if err != nil {
-			return err
-		}
-
-		log.Warn("deleting group")
-		_, err = s.identityStoreClient.DeleteGroup(
-			&identitystore.DeleteGroupInput{IdentityStoreId: &s.cfg.IdentityStoreID, GroupId: &awsGroupFull.ID},
-		)
-		if err != nil {
-			log.Error("deleting group")
-			return err
-		}
-	}
-
+	log.Info("I was suppose to delete these groups, but I am smart", delAWSGroups)
 	log.Info("sync completed")
 
 	return nil
@@ -564,7 +524,6 @@ func (s *syncGSuite) getGoogleGroupsAndUsers(googleGroups []*admin.Group) ([]*ad
 			log.WithField("id", m.Email).Debug("get user")
 			q := fmt.Sprintf("email:%s", m.Email)
 			u, err := s.google.GetUsers(q) // TODO: implement GetUser(m.Email)
-
 			if err != nil {
 				return nil, nil, err
 			}
@@ -592,7 +551,6 @@ func (s *syncGSuite) getGoogleGroupsAndUsers(googleGroups []*admin.Group) ([]*ad
 
 // getGroupOperations returns the groups of AWS that must be added, deleted and are equals
 func getGroupOperations(awsGroups []*aws.Group, googleGroups []*admin.Group) (add []*aws.Group, delete []*aws.Group, equals []*aws.Group) {
-
 	awsMap := make(map[string]*aws.Group)
 	googleMap := make(map[string]struct{})
 
@@ -625,7 +583,6 @@ func getGroupOperations(awsGroups []*aws.Group, googleGroups []*admin.Group) (ad
 
 // getUserOperations returns the users of AWS that must be added, deleted, updated and are equals
 func getUserOperations(awsUsers []*aws.User, googleUsers []*admin.User) (add []*aws.User, delete []*aws.User, update []*aws.User, equals []*aws.User) {
-
 	awsMap := make(map[string]*aws.User)
 	googleMap := make(map[string]struct{})
 
@@ -664,7 +621,6 @@ func getUserOperations(awsUsers []*aws.User, googleUsers []*admin.User) (add []*
 
 // groupUsersOperations returns the groups and its users of AWS that must be delete from these groups and what are equals
 func getGroupUsersOperations(gGroupsUsers map[string][]*admin.User, awsGroupsUsers map[string][]*aws.User) (delete map[string][]*aws.User, equals map[string][]*aws.User) {
-
 	mbG := make(map[string]map[string]struct{})
 
 	// get user in google groups that are in aws groups and
@@ -739,7 +695,6 @@ func DoSync(ctx context.Context, cfg *config.Config) error {
 		// AWS Region to send requests to, provided by config
 		Region: &cfg.Region,
 	})
-
 	if err != nil {
 		return err
 	}
@@ -813,7 +768,6 @@ func (s *syncGSuite) GetGroups() ([]*aws.Group, error) {
 		&identitystore.ListGroupsInput{IdentityStoreId: &s.cfg.IdentityStoreID},
 		ListGroupsPagesCallbackFn,
 	)
-
 	if err != nil {
 		return nil, err
 	}
@@ -845,7 +799,6 @@ func (s *syncGSuite) GetUsers() ([]*aws.User, error) {
 		&identitystore.ListUsersInput{IdentityStoreId: &s.cfg.IdentityStoreID},
 		ListUsersPagesCallbackFn,
 	)
-
 	if err != nil {
 		return nil, err
 	}
@@ -867,8 +820,8 @@ func ConvertSdkUserObjToNative(user *identitystore.User) *aws.User {
 
 	for _, email := range user.Emails {
 		if email.Value == nil || email.Type == nil || email.Primary == nil {
-              		// This must be a user created by AWS Control Tower
-                        // Need feature development to make how these users are treated
+			// This must be a user created by AWS Control Tower
+			// Need feature development to make how these users are treated
 			// configurable.
 			continue
 		}
@@ -944,7 +897,6 @@ func (s *syncGSuite) GetGroupMembershipsLists(awsGroups []*aws.Group, awsUsersMa
 				IdentityStoreId: &s.cfg.IdentityStoreID,
 				GroupId:         &group.ID,
 			}, ListGroupMembershipPagesCallbackFn)
-
 		if err != nil {
 			return nil, err
 		}
@@ -961,7 +913,6 @@ func (s *syncGSuite) IsUserInGroup(user *aws.User, group *aws.Group) (*bool, err
 			MemberId:        &identitystore.MemberId{UserId: &user.ID},
 		},
 	)
-
 	if err != nil {
 		return nil, err
 	}
@@ -979,7 +930,6 @@ func (s *syncGSuite) RemoveUserFromGroup(userId *string, groupId *string) error 
 			MemberId:        &identitystore.MemberId{UserId: userId},
 		},
 	)
-
 	if err != nil {
 		return err
 	}

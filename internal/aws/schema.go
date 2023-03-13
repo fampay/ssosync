@@ -14,12 +14,18 @@
 
 package aws
 
+import "fmt"
+
 // Group represents a Group in AWS SSO
 type Group struct {
 	ID          string   `json:"id,omitempty"`
 	Schemas     []string `json:"schemas"`
 	DisplayName string   `json:"displayName"`
 	Members     []string `json:"members"`
+}
+
+func (g Group) String() string {
+	return fmt.Sprintf("{%v}", g.DisplayName)
 }
 
 // GroupFilterResults represents filtered results when we search for
@@ -77,6 +83,10 @@ type User struct {
 	Active      bool          `json:"active"`
 	Emails      []UserEmail   `json:"emails"`
 	Addresses   []UserAddress `json:"addresses"`
+}
+
+func (u User) String() string {
+	return fmt.Sprintf("{%v}", u.Username)
 }
 
 // UserFilterResults represents filtered results when we search for
